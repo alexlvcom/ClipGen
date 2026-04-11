@@ -55,6 +55,9 @@
         "stop_request_sent": "Stop request sent...",
         "task_cancelled": "Task cancelled by user.",
         "task_cancelled_during_request": "Task cancelled during request execution.",
+        "hotkey_listener_restarting": "Hotkey listener stopped unexpectedly. Restarting...",
+        "hotkey_listener_restarted": "Hotkey listener restarted.",
+        "hotkey_listener_restart_failed": "Failed to restart hotkey listener: {error}",
         "learning_explanation": "Explanation:"
     },
     "dialogs": {
@@ -227,6 +230,7 @@
     },
     "tray": {
         "show_hide": "Show/Hide",
+        "restart": "Restart ClipGen",
         "quit": "Quit"
     },
     "default_learning_prompt": "You are a language tutor. Analyze the corrections made to the text.\n\nIGNORE (don't explain):\n- Typos (random letter mistakes like \"helo\" -> \"hello\")\n- Symbol replacements ($ € ₽)\n- Capitalization changes\n\nEXPLAIN only real mistakes:\n- Spelling: why the word is spelled this way (rule + brief explanation)\n- Punctuation: why comma/dash is needed here\n- Grammar: if word form was corrected\n\nFormat:\n**mistake** -> **correct**\n*Rule: brief explanation*\n\n---\nOriginal: {original}\nResult: {result}\n\nIf only typos were fixed — return empty string.",

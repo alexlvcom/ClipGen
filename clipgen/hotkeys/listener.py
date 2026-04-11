@@ -3,7 +3,7 @@
 import logging
 import threading
 from queue import Queue
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, Optional, Set
 
 from pynput import keyboard as pkb
 
@@ -36,15 +36,26 @@ class HotkeyListener:
         self.is_pasting = False
         self.pasting_lock = threading.Lock()
 
-        # Stop signal
-        self.stop_event = threading.Event()
-        self._listener_thread: threading.Thread = None
+        self.listener_lock = threading.Lock()
+        self.listener: Optional[pkb.Listener] = None
+        self.last_error: str = ""
 
-    def _get_key_name(self, key) -> str:
+    def _reset_key_states(self) -> None:
+        """Clear tracked modifier states."""
+        with self.key_states_lock:
+            for key in self.key_states:
+                self.key_states[key] = False
+
+    def _remember_error(self, context: str, error: Exception) -> None:
+        """Store and log listener errors for later recovery diagnostics."""
+        self.last_error = f"{context}: {error}"
+        logger.exception(self.last_error)
+
+    def _get_key_name(self, key) -> Optional[str]:
         """Convert pynput key to standardized string."""
         if isinstance(key, pkb.KeyCode):
             return key.char.lower() if key.char else None
-        elif isinstance(key, pkb.Key):
+        if isinstance(key, pkb.Key):
             name = key.name.lower()
             # Normalize: 'ctrl_l' -> 'ctrl', 'win_r' -> 'meta'
             if name.endswith(('_l', '_r')):
@@ -58,22 +69,22 @@ class HotkeyListener:
 
     def _on_press(self, key) -> None:
         """Handle key press."""
-        with self.pasting_lock:
-            if self.is_pasting:
+        try:
+            with self.pasting_lock:
+                if self.is_pasting:
+                    return
+
+            key_name = self._get_key_name(key)
+            if not key_name:
                 return
 
-        key_name = self._get_key_name(key)
-        if not key_name:
-            return
+            with self.key_states_lock:
+                # Modifier key - update state and exit
+                if key_name in self.key_states:
+                    self.key_states[key_name] = True
+                    return
 
-        with self.key_states_lock:
-            # Modifier key - update state and exit
-            if key_name in self.key_states:
-                self.key_states[key_name] = True
-                return
-
-            # Regular key - check for hotkey match
-            try:
+                # Regular key - check for hotkey match
                 pressed_modifiers: Set[str] = {
                     mod for mod, pressed in self.key_states.items() if pressed
                 }
@@ -93,48 +104,83 @@ class HotkeyListener:
                         })
                         return
 
-            except Exception as e:
-                logger.error(f"Error in on_press: {e}")
+        except Exception as e:
+            self._remember_error("Error in on_press", e)
 
     def _on_release(self, key) -> None:
         """Handle key release."""
-        with self.pasting_lock:
-            if self.is_pasting:
+        try:
+            with self.pasting_lock:
+                if self.is_pasting:
+                    return
+
+            key_name = self._get_key_name(key)
+            if not key_name:
                 return
 
-        key_name = self._get_key_name(key)
-        with self.key_states_lock:
-            if key_name in self.key_states:
-                self.key_states[key_name] = False
+            with self.key_states_lock:
+                if key_name in self.key_states:
+                    self.key_states[key_name] = False
 
-    def start(self) -> None:
-        """Start the listener in a background thread."""
-        if self._listener_thread and self._listener_thread.is_alive():
-            return
+        except Exception as e:
+            self._remember_error("Error in on_release", e)
 
-        self.stop_event.clear()
-        self._listener_thread = threading.Thread(
-            target=self._run
-        )
-        self._listener_thread.start()
+    def start(self) -> bool:
+        """Start the listener."""
+        with self.listener_lock:
+            if self.listener and self.listener.is_alive():
+                return False
 
-    def _run(self) -> None:
-        """Run the pynput listener."""
-        listener = pkb.Listener(
-            on_press=self._on_press,
-            on_release=self._on_release
-        )
-        listener.start()
-        self.stop_event.wait()
-        listener.stop()
+            self._reset_key_states()
+            self.last_error = ""
+
+            try:
+                self.listener = pkb.Listener(
+                    on_press=self._on_press,
+                    on_release=self._on_release
+                )
+                self.listener.daemon = True
+                self.listener.start()
+                logger.info("Hotkey listener started")
+                return True
+            except Exception as e:
+                self.listener = None
+                self._remember_error("Failed to start hotkey listener", e)
+                return False
 
     def stop(self) -> None:
         """Stop the listener."""
-        self.stop_event.set()
-        if self._listener_thread:
-            self._listener_thread.join(timeout=1.0)
+        with self.listener_lock:
+            listener = self.listener
+            self.listener = None
+
+        self._reset_key_states()
+        self.set_pasting(False)
+
+        if listener:
+            try:
+                listener.stop()
+                listener.join(timeout=1.0)
+                logger.info("Hotkey listener stopped")
+            except Exception as e:
+                self._remember_error("Failed to stop hotkey listener", e)
+
+    def restart(self) -> bool:
+        """Restart the listener."""
+        self.stop()
+        return self.start()
+
+    def is_running(self) -> bool:
+        """Return whether the underlying pynput listener is alive."""
+        with self.listener_lock:
+            return bool(self.listener and self.listener.is_alive())
 
     def set_pasting(self, is_pasting: bool) -> None:
         """Set pasting flag (to ignore hotkeys during paste)."""
         with self.pasting_lock:
             self.is_pasting = is_pasting
+
+        # Copy/paste simulation can swallow key release events and leave modifiers
+        # in a stuck state, so reset them whenever we take control of the keyboard.
+        if is_pasting:
+            self._reset_key_states()

@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
 
         self.is_pinned = False
         self.working_timer = QTimer(self)
+        self.hotkey_health_timer = QTimer(self)
         self.start_time = 0
 
         # Model test timers for live updates
@@ -290,6 +291,7 @@ class MainWindow(QMainWindow):
         """Set up system tray icon."""
         self.tray = TrayIconManager(self, self.lang)
         self.tray.on_show_hide = self._toggle_visibility
+        self.tray.on_restart = self._restart_application
         self.tray.on_quit = self._quit_application
         self.tray.show()
 
@@ -306,6 +308,8 @@ class MainWindow(QMainWindow):
 
         # Working timer
         self.working_timer.timeout.connect(self._update_working_time)
+        self.hotkey_health_timer.timeout.connect(self.app.ensure_hotkey_listener)
+        self.hotkey_health_timer.start(5000)
 
         # Settings tab signals
         self._connect_settings_signals()
@@ -1045,6 +1049,10 @@ class MainWindow(QMainWindow):
     def _quit_application(self) -> None:
         """Quit the application."""
         self.app.shutdown()
+
+    def _restart_application(self) -> None:
+        """Restart the application from tray."""
+        self.app.restart()
 
     def _start_working(self) -> None:
         """Start working animation."""

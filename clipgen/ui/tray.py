@@ -37,6 +37,7 @@ class TrayIconManager:
 
         # Callbacks
         self.on_show_hide = None
+        self.on_restart = None
         self.on_quit = None
 
     def _setup_icon(self) -> None:
@@ -73,6 +74,12 @@ class TrayIconManager:
         self.show_hide_action.triggered.connect(self._on_show_hide)
         menu.addAction(self.show_hide_action)
 
+        self.restart_action = QAction(
+            tray_lang.get("restart", "Restart"), self.parent
+        )
+        self.restart_action.triggered.connect(self._on_restart)
+        menu.addAction(self.restart_action)
+
         menu.addSeparator()
 
         # Quit action
@@ -92,6 +99,10 @@ class TrayIconManager:
     def _on_quit(self) -> None:
         if self.on_quit:
             self.on_quit()
+
+    def _on_restart(self) -> None:
+        if self.on_restart:
+            self.on_restart()
 
     def _on_activated(self, reason) -> None:
         """Handle tray icon click."""
@@ -196,4 +207,5 @@ class TrayIconManager:
         self.lang = lang
         tray_lang = lang.get("tray", {})
         self.show_hide_action.setText(tray_lang.get("show_hide", "Show/Hide"))
+        self.restart_action.setText(tray_lang.get("restart", "Restart"))
         self.quit_action.setText(tray_lang.get("quit", "Quit"))

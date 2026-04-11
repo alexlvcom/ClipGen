@@ -7,6 +7,7 @@ import datetime
 import random
 import threading
 import logging
+import subprocess
 from queue import Queue
 
 from PyQt5.QtWidgets import QApplication
@@ -113,6 +114,52 @@ class ClipGenApp:
 
         # Load welcome message asynchronously
         threading.Thread(target=self._load_welcome_message, daemon=True).start()
+
+    def ensure_hotkey_listener(self) -> None:
+        """Restart hotkey listener if pynput stopped unexpectedly."""
+        if self.hotkey_listener.is_running():
+            return
+
+        logger.warning("Hotkey listener is not running. Attempting restart.")
+        logs_lang = self.i18n.lang.get("logs", {})
+        self.window.log_signal.emit(
+            logs_lang.get(
+                "hotkey_listener_restarting",
+                "Hotkey listener stopped unexpectedly. Restarting..."
+            ),
+            "#FFDD55"
+        )
+
+        if self.hotkey_listener.restart():
+            self.window.log_signal.emit(
+                logs_lang.get(
+                    "hotkey_listener_restarted",
+                    "Hotkey listener restarted."
+                ),
+                "#A3BFFA"
+            )
+            return
+
+        error_details = self.hotkey_listener.last_error or "Unknown error"
+        self.window.log_signal.emit(
+            logs_lang.get(
+                "hotkey_listener_restart_failed",
+                "Failed to restart hotkey listener: {error}"
+            ).format(error=error_details),
+            ERROR_RED
+        )
+
+    def restart(self) -> None:
+        """Restart the current ClipGen process."""
+        logger.info("Restarting ClipGen...")
+
+        if getattr(sys, 'frozen', False):
+            args = [sys.executable]
+        else:
+            args = [sys.executable] + sys.argv
+
+        subprocess.Popen(args, cwd=APPLICATION_PATH)
+        self.shutdown()
 
     def _connect_processor_callbacks(self) -> None:
         """Connect processor callbacks to window signals."""
