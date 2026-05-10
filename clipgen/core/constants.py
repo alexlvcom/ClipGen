@@ -57,11 +57,11 @@ DEFAULT_CONFIG = {
         {"key": "YOUR_API_KEY_HERE", "name": "Main Key", "usage_timestamps": [], "active": True}
     ],
     "gemini_models": [
-        {"name": "gemini-2.5-flash"},
-        {"name": "gemini-2.5-flash-lite"},
-        {"name": "gemini-2.0-flash"}
+        {"name": "gemma-4-26b-a4b-it"},
+        {"name": "gemma-4-31b-it"},
+        {"name": "gemini-2.0-flash-lite"}
     ],
-    "active_model": "gemini-2.5-flash-lite",
+    "active_model": "gemma-4-26b-a4b-it",
     "language": "en",
     "api_keys_visible": False,
     "auto_switch_api_keys": True,

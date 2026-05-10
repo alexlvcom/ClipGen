@@ -74,8 +74,7 @@ class ConfigManager:
         deprecated_gemini_models = {
             "gemini-flash-latest": "gemini-2.5-flash",
             "gemini-flash-lite-latest": "gemini-2.5-flash-lite",
-            "gemini-2.0-flash-lite": "gemini-2.5-flash-lite",
-            "gemma-3-27b-it": "gemini-2.5-flash-lite",
+            "gemma-3-1b-it": "gemma-4-26b-a4b-it",
         }
 
         active_model = self.config.get("active_model")
@@ -90,7 +89,11 @@ class ConfigManager:
                 for model in current_models
                 if isinstance(model, dict)
             }
-            for required_model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+            for required_model in (
+                "gemma-4-26b-a4b-it",
+                "gemma-4-31b-it",
+                "gemini-2.0-flash-lite",
+            ):
                 if required_model not in existing_names:
                     current_models.append({"name": required_model})
                     config_changed = True
