@@ -93,6 +93,7 @@ class ClipGenApp:
 
         # Main window
         self.window = MainWindow(self)
+        self.hotkey_listener.set_window(self.window)
 
         # Connect processor callbacks to window signals
         self._connect_processor_callbacks()
@@ -105,6 +106,12 @@ class ClipGenApp:
 
         # Log startup
         logger.info(f"ClipGen v{__version__} started")
+        self.window.log_signal.emit(
+            f"Hotkey backend: {self.hotkey_listener.active_backend}",
+            ACCENT_BLUE
+        )
+        if self.hotkey_listener.last_error:
+            self.window.log_signal.emit(self.hotkey_listener.last_error, "#FFDD55")
 
         # Sync autostart button
         self.window.settings_tab.set_autostart_checked(is_autostart_enabled())
@@ -116,11 +123,14 @@ class ClipGenApp:
         threading.Thread(target=self._load_welcome_message, daemon=True).start()
 
     def ensure_hotkey_listener(self) -> None:
-        """Restart hotkey listener if pynput stopped unexpectedly."""
-        if self.hotkey_listener.is_running():
+        """Restart hotkey listener if the active backend stopped or stalled."""
+        if self.hotkey_listener.is_running() and not self.hotkey_listener.is_suspect():
             return
 
-        logger.warning("Hotkey listener is not running. Attempting restart.")
+        logger.warning(
+            "Hotkey backend %s is unhealthy. Attempting restart.",
+            self.hotkey_listener.active_backend
+        )
         logs_lang = self.i18n.lang.get("logs", {})
         self.window.log_signal.emit(
             logs_lang.get(
@@ -148,6 +158,16 @@ class ClipGenApp:
             ).format(error=error_details),
             ERROR_RED
         )
+
+    def refresh_hotkey_listener(self) -> None:
+        """Re-register hotkeys after configuration changes."""
+        logger.info("Refreshing hotkey registrations")
+        if not self.hotkey_listener.restart_registrations():
+            error_details = self.hotkey_listener.last_error or "Unknown error"
+            self.window.log_signal.emit(
+                f"Failed to refresh hotkey registrations: {error_details}",
+                ERROR_RED
+            )
 
     def restart(self) -> None:
         """Restart the current ClipGen process."""

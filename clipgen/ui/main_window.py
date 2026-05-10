@@ -399,9 +399,7 @@ class MainWindow(QMainWindow):
 
         pt.hotkey_added.connect(self._add_hotkey)
         pt.hotkey_deleted.connect(self._delete_hotkey)
-        pt.combination_changed.connect(
-            lambda i, c: self.app.hotkey_manager.update_combination(i, c)
-        )
+        pt.combination_changed.connect(self._update_hotkey_combination)
         pt.name_changed.connect(
             lambda i, n: self.app.hotkey_manager.update_name(i, n)
         )
@@ -728,8 +726,14 @@ class MainWindow(QMainWindow):
 
     def _add_hotkey(self) -> None:
         self.app.hotkey_manager.add()
+        self.app.refresh_hotkey_listener()
         self.prompts_tab.refresh()
         self._refresh_action_buttons()
+
+    def _update_hotkey_combination(self, index: int, combination: str) -> None:
+        """Persist a shortcut edit and refresh OS-level registrations."""
+        if self.app.hotkey_manager.update_combination(index, combination):
+            self.app.refresh_hotkey_listener()
 
     def _delete_hotkey(self, index: int) -> None:
         hotkeys = self.config.get("hotkeys", [])
@@ -758,6 +762,7 @@ class MainWindow(QMainWindow):
                     return
 
         self.app.hotkey_manager.delete(index)
+        self.app.refresh_hotkey_listener()
         self.prompts_tab.refresh()
         self._refresh_action_buttons()
 
@@ -1117,6 +1122,12 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'button_resize_timer'):
             self.button_resize_timer.start(200)
+
+    def nativeEvent(self, eventType, message):
+        """Forward Windows hotkey messages to the native backend."""
+        if self.app.hotkey_listener.handle_native_event(message):
+            return True, 0
+        return super().nativeEvent(eventType, message)
 
     def _apply_global_styles(self) -> None:
         """Apply global styles to the application."""
