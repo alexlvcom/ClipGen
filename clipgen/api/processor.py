@@ -91,6 +91,13 @@ class TextProcessor:
         # Return None to use provider's default from config
         return None
 
+    def _get_resolved_provider_and_model(self, hotkey: dict = None):
+        """Return provider plus the concrete model name that will be requested."""
+        provider = self._get_provider(hotkey)
+        model_override = self._get_model_name(hotkey)
+        model_name = model_override or self.config.get(provider.active_model_key, "Unknown")
+        return provider, model_name, model_override
+
     def _update_key_timestamp(self, provider) -> None:
         """Update usage timestamp for active key."""
         key_data = provider.get_active_key()
@@ -133,9 +140,8 @@ class TextProcessor:
         combo = hotkey["combination"] if hotkey else ""
 
         # Get provider and model based on hotkey settings
-        provider = self._get_provider(hotkey)
+        provider, model_name, model_override = self._get_resolved_provider_and_model(hotkey)
         provider_name = provider.name
-        model_override = self._get_model_name(hotkey)
 
         # Create cancel event
         cancel_event = threading.Event()
@@ -152,7 +158,7 @@ class TextProcessor:
             return ""
 
         try:
-            logger.info(f"[{combo}: {action_name}] Processing via {provider_name}...")
+            logger.info(f"[{combo}: {action_name}] Processing via {provider_name}/{model_name}...")
 
             # Calculate max attempts based on number of keys
             api_keys = self.config.get(provider.api_keys_key, [])
@@ -292,10 +298,12 @@ class TextProcessor:
         )
         combo = hotkey["combination"] if hotkey else ""
         color = hotkey["log_color"] if hotkey else "#FFFFFF"
+        provider, model_name, _ = self._get_resolved_provider_and_model(hotkey)
 
         # Log action header
         if self.on_log:
             self.on_log(f"{combo}: {action_name} - {timestamp}", color)
+            self.on_log(f"Model: {provider.name}/{model_name}", "#888888")
 
         try:
             # Simulate Ctrl+C
