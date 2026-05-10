@@ -260,8 +260,8 @@ class ClipGenApp:
 
     def _generate_welcome_message(self) -> str:
         """Generate welcome message from AI using active provider."""
-        import google.generativeai as genai
-        from google.generativeai import GenerationConfig
+        from google import genai
+        from google.genai import types
         from openai import OpenAI
 
         lang = self.i18n.lang
@@ -315,11 +315,22 @@ class ClipGenApp:
                 if provider == "gemini":
                     # Direct Gemini API call (like original)
                     active_model = config.get("active_model", "gemini-2.0-flash")
-                    model = genai.GenerativeModel(active_model)
-                    response = model.generate_content(
-                        prompt,
-                        generation_config=GenerationConfig(temperature=0.9, max_output_tokens=2048),
-                        request_options={'timeout': 30}
+                    active_key = None
+                    for k in config.get("api_keys", []):
+                        if k.get("active"):
+                            active_key = k.get("key")
+                            break
+                    if not active_key or active_key == "YOUR_API_KEY_HERE":
+                        raise ValueError("No active Gemini API key")
+
+                    client = genai.Client(api_key=active_key)
+                    response = client.models.generate_content(
+                        model=active_model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.9,
+                            max_output_tokens=2048,
+                        ),
                     )
                     if response and response.text.strip():
                         return response.text.strip()

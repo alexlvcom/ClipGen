@@ -71,6 +71,30 @@ class ConfigManager:
                     key_data["usage_timestamps"] = []
                     config_changed = True
 
+        deprecated_gemini_models = {
+            "gemini-flash-latest": "gemini-2.5-flash",
+            "gemini-flash-lite-latest": "gemini-2.5-flash-lite",
+            "gemini-2.0-flash-lite": "gemini-2.5-flash-lite",
+            "gemma-3-27b-it": "gemini-2.5-flash-lite",
+        }
+
+        active_model = self.config.get("active_model")
+        if active_model in deprecated_gemini_models:
+            self.config["active_model"] = deprecated_gemini_models[active_model]
+            config_changed = True
+
+        current_models = self.config.get("gemini_models", [])
+        if isinstance(current_models, list):
+            existing_names = {
+                model.get("name")
+                for model in current_models
+                if isinstance(model, dict)
+            }
+            for required_model in ("gemini-2.5-flash", "gemini-2.5-flash-lite"):
+                if required_model not in existing_names:
+                    current_models.append({"name": required_model})
+                    config_changed = True
+
         return config_changed
 
     def save(self) -> None:

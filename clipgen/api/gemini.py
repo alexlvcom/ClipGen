@@ -4,8 +4,8 @@ import io
 import threading
 from typing import Dict, Any, Optional
 
-import google.generativeai as genai
-from google.generativeai import GenerationConfig, types
+from google import genai
+from google.genai import types
 from PIL import Image
 
 from .base import APIProvider
@@ -20,9 +20,7 @@ class GeminiProvider(APIProvider):
 
     def _configure_initial(self) -> None:
         """Configure genai with initial API key."""
-        key = self.get_active_key_value()
-        if key and key != "YOUR_API_KEY_HERE":
-            genai.configure(api_key=key)
+        # The current Google GenAI SDK uses explicit Client instances per call.
 
     @property
     def name(self) -> str:
@@ -50,7 +48,8 @@ class GeminiProvider(APIProvider):
 
     def reconfigure(self, api_key: str) -> None:
         """Reconfigure genai with new API key."""
-        genai.configure(api_key=api_key)
+        # Kept for compatibility with callers that switch keys.
+        return None
 
     def generate(
         self,
@@ -78,17 +77,34 @@ class GeminiProvider(APIProvider):
             raise ValueError("Cancelled")
 
         model_name = model_override or self.config.get(self.active_model_key, "gemini-2.0-flash")
-        model = genai.GenerativeModel(model_name)
+        api_key = self.get_active_key_value()
+        if not api_key or api_key == "YOUR_API_KEY_HERE":
+            raise ValueError("Gemini API key is not configured")
 
         # Safety settings - allow all content
-        safety_settings = {
-            types.HarmCategory.HARM_CATEGORY_HARASSMENT: types.HarmBlockThreshold.BLOCK_NONE,
-            types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: types.HarmBlockThreshold.BLOCK_NONE,
-            types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: types.HarmBlockThreshold.BLOCK_NONE,
-            types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: types.HarmBlockThreshold.BLOCK_NONE,
-        }
+        safety_settings = [
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=types.HarmBlockThreshold.BLOCK_NONE,
+            ),
+        ]
 
-        gen_config = GenerationConfig(temperature=0.7)
+        gen_config = types.GenerateContentConfig(
+            temperature=0.7,
+            safety_settings=safety_settings,
+        )
 
         # Build content
         if is_image and image_data:
@@ -105,14 +121,14 @@ class GeminiProvider(APIProvider):
         else:
             content = [prompt, text]
 
-        response = model.generate_content(
-            content,
-            generation_config=gen_config,
-            safety_settings=safety_settings,
-            request_options={'timeout': 60}
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=content,
+            config=gen_config,
         )
 
-        if not response.parts:
+        if not response.text:
             raise ValueError("Empty response from Gemini")
 
         return response.text.strip()

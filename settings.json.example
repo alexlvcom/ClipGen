@@ -69,7 +69,7 @@
     ],
     "active_api_key": 3,
     "api_keys_visible": true,
-    "active_model": "gemma-3-27b-it",
+    "active_model": "gemini-2.5-flash-lite",
     "gemini_models": [
         {
             "name": "gemini-2.5-pro",
@@ -87,24 +87,9 @@
             "test_duration": 3.0275871753692627
         },
         {
-            "name": "gemini-flash-latest",
-            "test_status": "success",
-            "test_duration": 2.053877830505371
-        },
-        {
-            "name": "gemini-flash-lite-latest",
-            "test_status": "success",
-            "test_duration": 0.9613571166992188
-        },
-        {
-            "name": "gemini-2.0-flash-lite",
-            "test_status": "error",
+            "name": "gemini-2.0-flash",
+            "test_status": "not_tested",
             "test_duration": 0.0
-        },
-        {
-            "name": "gemma-3-27b-it",
-            "test_status": "success",
-            "test_duration": 3.2298221588134766
         }
     ],
     "auto_switch_api_keys": true,

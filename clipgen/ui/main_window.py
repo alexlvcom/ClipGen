@@ -974,8 +974,8 @@ class MainWindow(QMainWindow):
 
     def _generate_instructions_gemini(self, prompt: str) -> str:
         """Generate instructions using Gemini API."""
-        import google.generativeai as genai
-        from google.generativeai import GenerationConfig
+        from google import genai
+        from google.genai import types
 
         # Get active API key
         api_keys = self.config.get("api_keys", [])
@@ -991,16 +991,14 @@ class MainWindow(QMainWindow):
         if not active_key:
             return None
 
-        genai.configure(api_key=active_key)
-        model = genai.GenerativeModel(self.config.get("active_model", "gemini-2.0-flash"))
-
-        response = model.generate_content(
-            prompt,
-            generation_config=GenerationConfig(
+        client = genai.Client(api_key=active_key)
+        response = client.models.generate_content(
+            model=self.config.get("active_model", "gemini-2.0-flash"),
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 temperature=0.7,
-                max_output_tokens=1024
-            ),
-            request_options={'timeout': 30}
+                max_output_tokens=1024,
+            )
         )
 
         return response.text.strip() if response.text else None

@@ -258,7 +258,7 @@ class TextProcessor:
             elif "400" in err_str and "api key" in err_str:
                 final_msg = err_dict.get("gemini_400_invalid_key", "Error: Invalid Key")
             elif "404" in err_str and "not found" in err_str:
-                model_name = self.config.get("active_model", "Unknown")
+                model_name = model_override or self.config.get("active_model", "Unknown")
                 final_msg = err_dict.get("gemini_404_model_not_found", "Error: Model not found").format(model_name=model_name)
 
             if self.on_log:

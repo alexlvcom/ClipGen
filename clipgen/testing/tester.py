@@ -7,8 +7,8 @@ from typing import Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 
-import google.generativeai as genai
-from google.generativeai import GenerationConfig
+from google import genai
+from google.genai import types
 from openai import OpenAI
 
 logger = logging.getLogger('ClipGen')
@@ -110,13 +110,6 @@ class APITester:
             self.gemini_key_statuses[index] = TestStatus.ERROR.value
             return TestResult(False, error_message="Invalid characters in key")
 
-        # Get original key to restore later
-        original_key = None
-        for k in api_keys:
-            if k.get("active"):
-                original_key = k.get("key")
-                break
-
         cancel_event = self._create_cancel_event()
 
         with self.genai_lock:
@@ -124,12 +117,11 @@ class APITester:
                 if cancel_event.is_set():
                     raise ValueError("Cancelled")
 
-                genai.configure(api_key=key_to_test)
-                model = genai.GenerativeModel(self.config.get("active_model", "gemini-2.0-flash"))
-                response = model.generate_content(
-                    "Test",
-                    generation_config=GenerationConfig(temperature=0.0),
-                    request_options={'timeout': 60}
+                client = genai.Client(api_key=key_to_test)
+                response = client.models.generate_content(
+                    model=self.config.get("active_model", "gemini-2.0-flash"),
+                    contents="Test",
+                    config=types.GenerateContentConfig(temperature=0.0),
                 )
 
                 if response and response.text.strip():
@@ -145,9 +137,6 @@ class APITester:
 
             finally:
                 self._clear_cancel_event()
-                # Restore original key
-                if original_key and original_key != "YOUR_API_KEY_HERE":
-                    genai.configure(api_key=original_key)
                 if on_complete:
                     on_complete()
 
@@ -197,11 +186,11 @@ class APITester:
                 raise ValueError("Cancelled")
 
             start_time = time.time()
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(
-                "Test",
-                generation_config=GenerationConfig(temperature=0.0),
-                request_options={'timeout': 60}
+            client = genai.Client(api_key=active_key)
+            response = client.models.generate_content(
+                model=model_name,
+                contents="Test",
+                config=types.GenerateContentConfig(temperature=0.0),
             )
 
             if response and response.text.strip():
