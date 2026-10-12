@@ -76,7 +76,9 @@ class GeminiProvider(APIProvider):
         if cancel_event.is_set():
             raise ValueError("Cancelled")
 
-        model_name = model_override or self.config.get(self.active_model_key, "gemini-2.0-flash")
+        model_name = model_override or self.config.get(
+            self.active_model_key, "gemma-4-26b-a4b-it"
+        )
         api_key = self.get_active_key_value()
         if not api_key or api_key == "YOUR_API_KEY_HERE":
             raise ValueError("Gemini API key is not configured")

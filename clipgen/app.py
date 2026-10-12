@@ -314,7 +314,7 @@ class ClipGenApp:
             try:
                 if provider == "gemini":
                     # Direct Gemini API call (like original)
-                    active_model = config.get("active_model", "gemini-2.0-flash")
+                    active_model = config.get("active_model", "gemma-4-26b-a4b-it")
                     active_key = None
                     for k in config.get("api_keys", []):
                         if k.get("active"):

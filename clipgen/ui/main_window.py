@@ -993,7 +993,7 @@ class MainWindow(QMainWindow):
 
         client = genai.Client(api_key=active_key)
         response = client.models.generate_content(
-            model=self.config.get("active_model", "gemini-2.0-flash"),
+            model=self.config.get("active_model", "gemma-4-26b-a4b-it"),
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.7,

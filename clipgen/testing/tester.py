@@ -119,7 +119,7 @@ class APITester:
 
                 client = genai.Client(api_key=key_to_test)
                 response = client.models.generate_content(
-                    model=self.config.get("active_model", "gemini-2.0-flash"),
+                    model=self.config.get("active_model", "gemma-4-26b-a4b-it"),
                     contents="Test",
                     config=types.GenerateContentConfig(temperature=0.0),
                 )
