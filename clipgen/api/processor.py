@@ -306,6 +306,8 @@ class TextProcessor:
             self.on_log(f"Model: {provider.name}/{model_name}", "#888888")
 
         try:
+            source_window = self.clipboard.get_foreground_window()
+
             # Simulate Ctrl+C
             self.clipboard.simulate_copy()
 
@@ -330,9 +332,6 @@ class TextProcessor:
             )
 
             if result:
-                # Set result to clipboard
-                self.clipboard.set_text(result)
-
                 # Learning mode: start parallel explanation request
                 if hotkey and hotkey.get("learning_mode") and not is_image:
                     original_text = content
@@ -342,8 +341,23 @@ class TextProcessor:
                         daemon=True
                     ).start()
 
-                # Simulate Ctrl+V
-                self.clipboard.simulate_paste()
+                if is_image:
+                    self.clipboard.set_text(result)
+                    self.clipboard.simulate_paste()
+                    pasted = True
+                else:
+                    pasted = self.clipboard.replace_text(content, result, source_window)
+
+                if not pasted:
+                    warning = self.lang.get("errors", {}).get(
+                        "selection_lost",
+                        "The selection changed. The result is on the clipboard; select the text and paste it manually."
+                    )
+                    if self.on_log:
+                        self.on_log(warning, "#FFDD55")
+                    if self.on_error:
+                        self.on_error()
+                    return
 
                 duration = time.time() - start_time
 

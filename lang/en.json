@@ -126,6 +126,7 @@
         "gemini_quota_exceeded_friendly": "Error 429: API key limit exceeded. Wait a minute or switch keys.",
         "api_key_not_set": "API key not configured",
         "empty_clipboard": "Clipboard is empty",
+        "selection_lost": "The selection changed. The result is on the clipboard; select the text and paste it manually.",
         "no_image_clipboard": "Clipboard does not contain an image",
         "empty_text": "Empty text in request",
         "empty_response": "Received empty response from Gemini",

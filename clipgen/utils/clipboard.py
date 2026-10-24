@@ -10,6 +10,7 @@ import pyperclip
 from PIL import ImageGrab
 import win32api
 import win32con
+import win32gui
 
 
 class ClipboardHandler:
@@ -60,6 +61,57 @@ class ClipboardHandler:
             time.sleep(0.1)
         finally:
             self._set_pasting(False)
+
+    def get_foreground_window(self) -> int:
+        """Return the window that owns the text selection."""
+        return win32gui.GetForegroundWindow()
+
+    def simulate_select_all(self) -> None:
+        """Select the contents of the focused editor."""
+        self._set_pasting(True)
+
+        try:
+            win32api.keybd_event(win32con.VK_CONTROL, 0, 0, 0)
+            win32api.keybd_event(ord('A'), 0, 0, 0)
+            time.sleep(0.05)
+            win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
+            win32api.keybd_event(win32con.VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
+            time.sleep(0.1)
+        finally:
+            self._set_pasting(False)
+
+    def replace_text(self, original: str, result: str, window: int) -> bool:
+        """Paste over the original selection, restoring a lost full-draft selection."""
+        if self.get_foreground_window() != window:
+            self.set_text(result)
+            return False
+
+        # Copy again to see whether the selection survived the API request.
+        self.set_text("")
+        self.simulate_copy()
+        selected = self.get_text()
+
+        if selected != original:
+            if selected:
+                self.set_text(result)
+                return False
+
+            # Some editors clear the selection while waiting. Ctrl+A is safe
+            # only when the entire focused draft still matches the input.
+            self.simulate_select_all()
+            self.set_text("")
+            self.simulate_copy()
+            if self.get_text() != original:
+                self.set_text(result)
+                return False
+
+        if self.get_foreground_window() != window:
+            self.set_text(result)
+            return False
+
+        self.set_text(result)
+        self.simulate_paste()
+        return True
 
     def get_text(self) -> str:
         """Get text from clipboard."""

@@ -4,6 +4,10 @@ import sys
 import time
 import traceback
 
+import win32api
+import win32event
+import winerror
+
 
 def exception_hook(exctype, value, tb):
     """Handle uncaught exceptions by logging to file."""
@@ -18,6 +22,11 @@ def exception_hook(exctype, value, tb):
 
 def main():
     """Main entry point."""
+    mutex = win32event.CreateMutex(None, False, "Local\\ClipGen.SingleInstance")
+    if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
+        win32api.CloseHandle(mutex)
+        return
+
     # Install exception hook
     sys.excepthook = exception_hook
 
@@ -31,6 +40,8 @@ def main():
         print(f"Failed to start: {e}")
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        win32api.CloseHandle(mutex)
 
 
 if __name__ == "__main__":
