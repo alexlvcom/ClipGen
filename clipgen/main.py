@@ -1,5 +1,7 @@
 """Main entry point for ClipGen application."""
 
+import json
+import os
 import sys
 import time
 import traceback
@@ -20,10 +22,24 @@ def exception_hook(exctype, value, tb):
     sys.__excepthook__(exctype, value, tb)
 
 
+def prevent_duplicate_instances():
+    """Read the startup setting without migrating or writing the config file."""
+    if getattr(sys, "frozen", False):
+        app_dir = os.path.dirname(sys.executable)
+    else:
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    try:
+        with open(os.path.join(app_dir, "settings.json"), "r", encoding="utf-8") as f:
+            return json.load(f).get("prevent_duplicate_instances", True) is not False
+    except (OSError, ValueError, AttributeError):
+        return True
+
+
 def main():
     """Main entry point."""
     mutex = win32event.CreateMutex(None, False, "Local\\ClipGen.SingleInstance")
-    if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
+    if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS and prevent_duplicate_instances():
         win32api.CloseHandle(mutex)
         return
 

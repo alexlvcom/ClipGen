@@ -385,6 +385,7 @@ class MainWindow(QMainWindow):
 
         # Other
         st.autostart_toggled.connect(self._on_autostart_toggled)
+        st.prevent_duplicates_toggled.connect(self._on_prevent_duplicates_toggled)
         st.auto_switch_toggled.connect(self._on_auto_switch_toggled)
         st.visibility_toggled.connect(self._on_visibility_toggled)
         st.proxy_enabled_changed.connect(self._on_proxy_enabled)
@@ -635,6 +636,10 @@ class MainWindow(QMainWindow):
     def _on_autostart_toggled(self, checked: bool) -> None:
         from ..utils.autostart import set_autostart
         set_autostart(checked)
+
+    def _on_prevent_duplicates_toggled(self, checked: bool) -> None:
+        self.config["prevent_duplicate_instances"] = checked
+        self.app.config.save()
 
     def _on_auto_switch_toggled(self) -> None:
         self.config["auto_switch_api_keys"] = not self.config.get("auto_switch_api_keys", False)

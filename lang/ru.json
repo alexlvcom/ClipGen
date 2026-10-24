@@ -2,6 +2,7 @@
     "app_title": "ClipGen",
     "settings": {
         "autostart_label": "Запускать вместе с Windows",
+        "prevent_duplicates_label": "Запретить повторный запуск",
         "api_key_label": "API ключ Gemini:",
         "gemini_models_label": "Модели Gemini:",
         "language_label": "Язык:",
@@ -66,6 +67,7 @@
         "no_button": "Нет"
     },
     "tooltips": {
+        "prevent_duplicates_toggle": "Блокировать новые запуски ClipGen, пока работает другой экземпляр. Упакованное приложение может показывать два процесса для одного экземпляра.",
         "auto_switch_keys": "Авто-переключение ключей при лимите",
         "logs_tab": "Переключиться на вкладку логов",
         "settings_tab": "Переключиться на вкладку настроек",

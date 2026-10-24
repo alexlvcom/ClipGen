@@ -5,12 +5,12 @@ import time
 
 from PyQt5.QtWidgets import QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QFont
-from PyQt5.QtCore import Qt, QSize, QTimer
+from PyQt5.QtCore import Qt, QSize, QTimer, QEvent, QObject
 
 from ..core.constants import resource_path
 
 
-class TrayIconManager:
+class TrayIconManager(QObject):
     """Manages system tray icon with dynamic states."""
 
     # Icon colors (matching original)
@@ -28,6 +28,7 @@ class TrayIconManager:
             parent: Parent QWidget
             lang: Language strings dict
         """
+        super().__init__(parent)
         self.parent = parent
         self.lang = lang
         self.tray_icon = QSystemTrayIcon(parent)
@@ -53,7 +54,8 @@ class TrayIconManager:
 
     def _setup_menu(self) -> None:
         """Set up the tray context menu."""
-        menu = QMenu()
+        menu = QMenu(self.parent)
+        self.menu = menu
         menu.setStyleSheet("""
             QMenu {
                 background-color: #2e2e2e;
@@ -89,8 +91,25 @@ class TrayIconManager:
         self.quit_action.triggered.connect(self._on_quit)
         menu.addAction(self.quit_action)
 
+        # A Windows/Qt popup can remain on screen after losing focus. Close an
+        # idle tray menu even if Qt misses the normal outside-click dismissal.
+        self._menu_idle_timer = QTimer(menu)
+        self._menu_idle_timer.setSingleShot(True)
+        self._menu_idle_timer.setInterval(30000)
+        self._menu_idle_timer.timeout.connect(menu.hide)
+        menu.aboutToShow.connect(self._menu_idle_timer.start)
+        menu.aboutToHide.connect(self._menu_idle_timer.stop)
+        menu.installEventFilter(self)
+
         self.tray_icon.setContextMenu(menu)
         self.tray_icon.activated.connect(self._on_activated)
+
+    def eventFilter(self, watched, event):
+        if watched is self.menu and event.type() in (
+            QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.KeyPress
+        ):
+            self._menu_idle_timer.start()
+        return False
 
     def _on_show_hide(self) -> None:
         if self.on_show_hide:

@@ -63,6 +63,7 @@ DEFAULT_CONFIG = {
     ],
     "active_model": "gemma-4-26b-a4b-it",
     "language": "en",
+    "prevent_duplicate_instances": True,
     "api_keys_visible": False,
     "auto_switch_api_keys": True,
     "proxy_enabled": False,

@@ -2,6 +2,7 @@
     "app_title": "ClipGen",
     "settings": {
         "autostart_label": "Run at Windows startup",
+        "prevent_duplicates_label": "Prevent duplicate instances",
         "api_key_label": "Gemini API Key:",
         "gemini_models_label": "Gemini Models:",
         "language_label": "Language:",
@@ -106,6 +107,7 @@
         "provider_dropdown": "Select AI provider (Gemini or OpenAI-compatible)",
         "proxy_type_dropdown": "Select proxy type (HTTP or SOCKS5)",
         "autostart_toggle": "Launch ClipGen when Windows starts",
+        "prevent_duplicates_toggle": "Block new ClipGen launches while another instance is running. The packaged app can show two processes for one instance.",
         "proxy_enable_toggle": "Enable/disable proxy for API requests",
         "scale_up": "Increase interface scale",
         "scale_down": "Decrease interface scale",

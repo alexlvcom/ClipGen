@@ -49,6 +49,7 @@ class SettingsTab(QWidget):
 
     # Other signals
     autostart_toggled = pyqtSignal(bool)
+    prevent_duplicates_toggled = pyqtSignal(bool)
     auto_switch_toggled = pyqtSignal()
     visibility_toggled = pyqtSignal(bool)
     proxy_enabled_changed = pyqtSignal(bool)
@@ -317,7 +318,7 @@ class SettingsTab(QWidget):
         layout.addLayout(self.openai_models_layout)
 
     def _add_other_settings(self, layout: QVBoxLayout, lang: dict) -> None:
-        """Add other settings (autostart, proxy, language, scale)."""
+        """Add other settings (autostart, instances, proxy, language, scale)."""
         # Autostart
         autostart_group = QFrame()
         autostart_group.setStyleSheet("background-color: #252525; border-radius: 10px; padding: 5px;")
@@ -338,6 +339,27 @@ class SettingsTab(QWidget):
         autostart_layout.addWidget(self.autostart_btn)
 
         layout.addWidget(autostart_group)
+
+        instances_group = QFrame()
+        instances_group.setStyleSheet("background-color: #252525; border-radius: 10px; padding: 5px;")
+        instances_layout = QHBoxLayout(instances_group)
+        instances_layout.setContentsMargins(10, 5, 10, 5)
+
+        self.prevent_duplicates_label = QLabel(lang.get("prevent_duplicates_label", "Prevent duplicate instances"))
+        self.prevent_duplicates_label.setStyleSheet("border: none; font-size: 14px;")
+        instances_layout.addWidget(self.prevent_duplicates_label)
+        instances_layout.addStretch()
+
+        self.prevent_duplicates_btn = QPushButton("•")
+        self.prevent_duplicates_btn.setFixedSize(18, 18)
+        self.prevent_duplicates_btn.setCheckable(True)
+        self.prevent_duplicates_btn.setChecked(self.config.get("prevent_duplicate_instances", True))
+        self.prevent_duplicates_btn.setToolTip(self.lang.get("tooltips", {}).get(
+            "prevent_duplicates_toggle", "Prevent additional ClipGen launches"))
+        self.prevent_duplicates_btn.toggled.connect(self._on_prevent_duplicates_toggled)
+        self._update_toggle_style(self.prevent_duplicates_btn, self.prevent_duplicates_btn.isChecked())
+        instances_layout.addWidget(self.prevent_duplicates_btn)
+        layout.addWidget(instances_group)
 
         # Proxy
         proxy_group = QFrame()
@@ -449,14 +471,22 @@ class SettingsTab(QWidget):
         self._update_autostart_style(checked)
         self.autostart_toggled.emit(checked)
 
+    def _on_prevent_duplicates_toggled(self, checked: bool) -> None:
+        self._update_toggle_style(self.prevent_duplicates_btn, checked)
+        self.prevent_duplicates_toggled.emit(checked)
+
     def _on_proxy_toggled(self, checked: bool) -> None:
         self._update_proxy_btn_style(checked)
         self._update_proxy_ui_state(checked)
         self.proxy_enabled_changed.emit(checked)
 
     def _update_autostart_style(self, checked: bool) -> None:
+        self._update_toggle_style(self.autostart_btn, checked)
+
+    @staticmethod
+    def _update_toggle_style(button: QPushButton, checked: bool) -> None:
         if checked:
-            self.autostart_btn.setStyleSheet("""
+            button.setStyleSheet("""
                 QPushButton {
                     background-color: #3D8948;
                     color: white;
@@ -469,7 +499,7 @@ class SettingsTab(QWidget):
                 QPushButton:hover { background-color: #2A6C34; }
             """)
         else:
-            self.autostart_btn.setStyleSheet("""
+            button.setStyleSheet("""
                 QPushButton {
                     background-color: #676664;
                     color: #FFFFFF;
@@ -861,6 +891,11 @@ class SettingsTab(QWidget):
 
         # Update language label
         self.language_label.setText(settings_lang.get("language_label", "Language:"))
+
+        self.prevent_duplicates_label.setText(settings_lang.get(
+            "prevent_duplicates_label", "Prevent duplicate instances"))
+        self.prevent_duplicates_btn.setToolTip(lang.get("tooltips", {}).get(
+            "prevent_duplicates_toggle", "Prevent additional ClipGen launches"))
 
         # Update zoom label
         self.zoom_label.setText(settings_lang.get("zoom_label", "Zoom:"))
